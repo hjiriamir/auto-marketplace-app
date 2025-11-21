@@ -4,36 +4,28 @@ import cors from "cors";
 import connectDB from "./Config/db.js";
 import mongoose from "mongoose";
 
+import carRoutes from "./Routes/carRoutes.js";
+import userRoutes from "./Routes/userRoutes.js";
+import messageRoutes from "./Routes/contactMessageRoutes.js";
+import serviceRoutes from "./Routes/registrationRequestRoutes.js";
+
 dotenv.config();
+connectDB();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Connexion MongoDB
-connectDB();
+// Routes API
+app.use("/api/cars", carRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/services", serviceRoutes);
 
-/* -----------------------------------------------------
-   🔥 TEST TEMPORAIRE POUR CRÉER AUTOMATIQUEMENT LA BASE
--------------------------------------------------------- */
-const testSchema = new mongoose.Schema({ name: String });
-const Test = mongoose.model("Test", testSchema);
-
-const createTestDocument = async () => {
-  try {
-    await Test.create({ name: "premier test" });
-    console.log("➡️ 1er document créé automatiquement !");
-  } catch (error) {
-    console.log("Erreur création document :", error);
-  }
-};
-
-// On crée le document après la connexion à la DB
-setTimeout(createTestDocument, 1000);
-/* -----------------------------------------------------
-   🛑 FIN DU TEST TEMPORAIRE 
-   (À SUPPRIMER UNE FOIS QUE carstore APPARAÎT DANS COMPASS)
--------------------------------------------------------- */
+// Vérification de la connexion
+mongoose.connection.once("open", () => {
+  console.log("MongoDB connecté :", mongoose.connection.host);
+});
 
 app.get("/", (req, res) => {
   res.send("API du site de vente de voitures opérationnelle");
