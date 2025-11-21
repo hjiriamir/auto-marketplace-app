@@ -3,14 +3,20 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./Config/db.js";
 import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import carRoutes from "./Routes/carRoutes.js";
 import userRoutes from "./Routes/userRoutes.js";
 import messageRoutes from "./Routes/contactMessageRoutes.js";
 import serviceRoutes from "./Routes/registrationRequestRoutes.js";
+import uploadRoutes from "./Routes/uploadRoutes.js";
 
 dotenv.config();
 connectDB();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -21,6 +27,10 @@ app.use("/api/cars", carRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/upload", uploadRoutes);
+
+// Servir le dossier uploads en statique pour les URL publiques
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Vérification de la connexion
 mongoose.connection.once("open", () => {
