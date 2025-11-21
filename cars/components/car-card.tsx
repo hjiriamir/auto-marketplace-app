@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Car } from '@/lib/db';
-import { Fuel, Gauge, Cog, Heart, Star, MapPin, Calendar, Zap, Car } from 'lucide-react';
+import { Fuel, Gauge, Cog, Heart, Star, MapPin, Calendar, Zap } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites-context';
 import { useState } from 'react';
 
 interface CarCardProps {
   car: Car;
+  onFavoriteToggle?: (carId: string, isFavorite: boolean) => void; // Ajoutez cette ligne
 }
 
-export function CarCard({ car }: CarCardProps) {
+export function CarCard({ car, onFavoriteToggle }: CarCardProps) { // Ajoutez onFavoriteToggle ici
   const { isFavorite, toggleFavorite } = useFavorites();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -19,7 +20,14 @@ export function CarCard({ car }: CarCardProps) {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    const newFavoriteState = !isFavorite(car.id);
     toggleFavorite(car.id);
+    
+    // Si une prop onFavoriteToggle est passée, appelez-la aussi
+    if (onFavoriteToggle) {
+      onFavoriteToggle(car.id, newFavoriteState);
+    }
   };
 
   const favorite = isFavorite(car.id);

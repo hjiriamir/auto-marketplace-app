@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { useSearchParams } from 'next/navigation';
 import { FileText, Upload, CheckCircle, Clock, XCircle, Car, Wrench, Globe, Euro, Star } from 'lucide-react';
+import registrationService from "@/services/registrationService";
 
 type ServiceType = 'sell' | 'registration' | 'import';
 
@@ -114,6 +115,16 @@ function RegistrationContent() {
     }
   ];
 
+  // Map service IDs to API enum values
+  const getServiceTypeEnum = (serviceId: ServiceType): string => {
+    const serviceMap = {
+      'sell': 'Vendez votre voiture',
+      'registration': 'Immatriculation complète',
+      'import': 'Véhicule importé'
+    };
+    return serviceMap[serviceId];
+  };
+
   const getServiceColor = (service: Service) => {
     const colors = {
       green: {
@@ -201,46 +212,63 @@ function RegistrationContent() {
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/registrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      // Préparer les données pour l'API
+      const apiData = {
+        serviceType: getServiceTypeEnum(selectedService),
+        carInfo: {
+          brand: formData.carBrand,
+          model: formData.carModel,
+          year: formData.carYear,
+          mileage: formData.mileage,
+          fuelType: formData.fuelType,
+          transmission: "Manuelle", // Valeur par défaut ou à ajouter au formulaire
+          condition: "Bon état", // Valeur par défaut ou à ajouter au formulaire
+          description: formData.additionalNotes || "Aucune description fournie",
+          images: formData.documents,
+          chassisNumber: formData.chassisNumber,
+          plateNumber: formData.plateNumber
+        },
+        visitor: {
+          name: formData.sellerName,
+          email: formData.sellerEmail,
+          phone: formData.sellerPhone
+        }
+      };
 
-      if (response.ok) {
-        setSuccess(true);
-        // Reset form
-        setFormData({
-          serviceType: 'registration',
-          sellerName: '',
-          sellerEmail: '',
-          sellerPhone: '',
-          carBrand: '',
-          carModel: '',
-          carYear: new Date().getFullYear(),
-          chassisNumber: '',
-          plateNumber: '',
-          mileage: '',
-          fuelType: 'Essence',
-          buyerName: '',
-          buyerEmail: '',
-          buyerPhone: '',
-          proposedPrice: '',
-          lastTechnicalControl: '',
-          technicalControlCenter: '',
-          countryOfOrigin: '',
-          importDate: '',
-          customsDocument: '',
-          documents: [],
-          additionalNotes: '',
-        });
-        setUploadedFiles([]);
-        setTimeout(() => setSuccess(false), 5000);
-      } else {
-        setError('Erreur lors de l\'enregistrement');
-      }
+      // Appel du service pour créer la demande
+      await registrationService.createRequest(apiData);
+      
+      setSuccess(true);
+      // Reset form
+      setFormData({
+        serviceType: 'registration',
+        sellerName: '',
+        sellerEmail: '',
+        sellerPhone: '',
+        carBrand: '',
+        carModel: '',
+        carYear: new Date().getFullYear(),
+        chassisNumber: '',
+        plateNumber: '',
+        mileage: '',
+        fuelType: 'Essence',
+        buyerName: '',
+        buyerEmail: '',
+        buyerPhone: '',
+        proposedPrice: '',
+        lastTechnicalControl: '',
+        technicalControlCenter: '',
+        countryOfOrigin: '',
+        importDate: '',
+        customsDocument: '',
+        documents: [],
+        additionalNotes: '',
+      });
+      setUploadedFiles([]);
+      setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
-      setError('Erreur lors de l\'enregistrement');
+      setError('Erreur lors de l\'enregistrement de la demande');
+      console.error('Erreur lors de l\'enregistrement:', err);
     } finally {
       setLoading(false);
     }

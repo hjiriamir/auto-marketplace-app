@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Mail, Phone, MapPin, Clock, MessageCircle, Users, Briefcase } from 'lucide-react';
+import messageService from "@/services/messageService";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -29,21 +30,15 @@ export default function ContactPage() {
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setSuccess(true);
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-        setTimeout(() => setSuccess(false), 5000);
-      } else {
-        setError('Erreur lors de l\'envoi du message');
-      }
+      // Appel du service pour créer le message
+      await messageService.createMessage(formData);
+      
+      setSuccess(true);
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
       setError('Erreur lors de l\'envoi du message');
+      console.error('Erreur lors de l\'envoi du message:', err);
     } finally {
       setLoading(false);
     }

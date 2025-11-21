@@ -4,15 +4,30 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { Car } from '@/lib/db';
+//import { Car } from '@/lib/db';
 import { useSearchParams } from 'next/navigation';
 import { Filter, X, Search, DollarSign, Calendar, Fuel, Cog, Car as CarIcon, SlidersHorizontal, Check } from 'lucide-react';
+import carService from "@/services/carService";
 
 // Liste des marques populaires pour les suggestions
 const POPULAR_BRANDS = [
   'Renault', 'Peugeot', 'Toyota', 'Volkswagen', 'Mercedes', 
   'BMW', 'Audi', 'Hyundai', 'Kia', 'Ford', 'Citroën', 'Dacia'
 ];
+
+
+type Car = {
+  id: string;        
+  brand: string;
+  model: string;
+  price: number;
+  year: number;
+  fuelType: string;
+  transmission: string;
+  images: string[]; 
+  mileage: number;  
+  condition: string; 
+};
 
 function CatalogContent() {
   const [cars, setCars] = useState<Car[]>([]);
@@ -38,39 +53,78 @@ function CatalogContent() {
   }, [allCars]);
 
   useEffect(() => {
-    // Charger toutes les voitures une fois
-    fetch('/api/cars')
-      .then(res => res.json())
-      .then(data => {
-        setAllCars(data);
-      })
-      .catch(console.error);
+    async function loadAllCars() {
+      try {
+        const data = await carService.getCars();
+        
+        // Assurez-vous que chaque voiture a un ID stable et unique
+        const carsWithIds = data.map((car, index) => {
+          // Si la voiture n'a pas d'ID, créez-en un stable
+          if (!car.id) {
+            return {
+              ...car,
+              id: `car-${index}-${car.brand.toLowerCase()}-${car.model.toLowerCase()}`
+            };
+          }
+          return car;
+        });
+        
+        console.log('🆔 Final cars with IDs:', carsWithIds.map(c => ({ id: c.id, brand: c.brand, model: c.model })));
+        
+        setAllCars(carsWithIds);
+        setCars(carsWithIds);
+        setLoading(false);
+      } catch (err) {
+        console.error('Erreur récupération voitures :', err);
+        setLoading(false);
+      }
+    }
+  
+    loadAllCars();
   }, []);
+  
 
   useEffect(() => {
-    const query = new URLSearchParams();
-    if (search) query.append('search', search);
-    if (filters.brand) query.append('brand', filters.brand);
-    if (filters.minPrice) query.append('minPrice', filters.minPrice);
-    if (filters.maxPrice) query.append('maxPrice', filters.maxPrice);
-    if (filters.minYear) query.append('minYear', filters.minYear);
-    if (filters.maxYear) query.append('maxYear', filters.maxYear);
-    if (filters.fuelType) query.append('fuelType', filters.fuelType);
-    if (filters.transmission) query.append('transmission', filters.transmission);
-
+    if (!allCars.length) return;
+  
     setLoading(true);
-    
-    fetch(`/api/cars?${query}`)
-      .then(res => res.json())
-      .then(data => {
-        setCars(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching cars:', err);
-        setLoading(false);
-      });
-  }, [filters, search]);
+  
+    let filtered = [...allCars];
+  
+    if (search) {
+      filtered = filtered.filter(car =>
+        car.brand.toLowerCase().includes(search.toLowerCase()) ||
+        car.model.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+  
+    if (filters.brand)
+      filtered = filtered.filter(car =>
+        car.brand.toLowerCase().includes(filters.brand.toLowerCase())
+      );
+  
+    if (filters.minPrice)
+      filtered = filtered.filter(car => car.price >= Number(filters.minPrice));
+  
+    if (filters.maxPrice)
+      filtered = filtered.filter(car => car.price <= Number(filters.maxPrice));
+  
+    if (filters.minYear)
+      filtered = filtered.filter(car => car.year >= Number(filters.minYear));
+  
+    if (filters.maxYear)
+      filtered = filtered.filter(car => car.year <= Number(filters.maxYear));
+  
+    if (filters.fuelType)
+      filtered = filtered.filter(car => car.fuelType === filters.fuelType);
+  
+    if (filters.transmission)
+      filtered = filtered.filter(car => car.transmission === filters.transmission);
+  
+    setCars(filtered);
+    setLoading(false);
+  }, [filters, search, allCars]);
+  
 
   const filterInputClass = "w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-sm";
   const filterLabelClass = "block text-sm font-semibold mb-3 text-gray-900 flex items-center gap-2";
@@ -376,12 +430,16 @@ function CatalogContent() {
               ) : cars.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {cars.map((car, idx) => (
-                      <div key={car.id} style={{ animationDelay: `${idx * 0.05}s` }} className="animate-in-up">
+                    {cars.map((car) => (
+                      <div
+                        key={car.id}
+                        className="animate-in-up"
+                      >
                         <CarCard car={car} />
                       </div>
                     ))}
                   </div>
+
                   
                   {/* Résumé des résultats */}
                   <div className="mt-8 text-center">

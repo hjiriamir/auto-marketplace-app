@@ -7,43 +7,53 @@ import { CarCard } from '@/components/car-card';
 import { Car } from '@/lib/db';
 import { Heart, ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useFavorites } from '@/lib/favorites-context';
+import carService from '@/services/carService';
 
 export default function FavoritesPage() {
   const [favoriteCars, setFavoriteCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const { favorites, removeFavorite } = useFavorites();
 
   useEffect(() => {
-    // Charger les IDs des favoris depuis le localStorage
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    setFavoriteIds(favorites);
-    
-    // Charger les données des voitures
-    fetch('/api/cars')
-      .then(res => res.json())
-      .then((allCars: Car[]) => {
-        const favoritesData = allCars.filter(car => favorites.includes(car.id));
+    async function loadFavoriteCars() {
+      try {
+        console.log('🔄 FAVORITES DEBUG START ======================');
+        console.log('📌 Favorites IDs from context:', favorites);
+        
+        const allCars = await carService.getCars();
+        console.log('🚗 All cars from service:', allCars);
+        
+        // Debug détaillé de chaque voiture
+        allCars.forEach((car, index) => {
+          console.log(`   Car ${index}: ID="${car.id}", ${car.brand} ${car.model}`);
+        });
+        
+        // Debug du filtrage
+        const favoritesData = allCars.filter(car => {
+          const isMatch = favorites.includes(car.id);
+          console.log(`   🔍 Checking car "${car.id}": ${isMatch ? '✅ MATCH' : '❌ NO MATCH'}`);
+          return isMatch;
+        });
+        
+        console.log('❤️ Final favorite cars:', favoritesData);
+        console.log('🔚 FAVORITES DEBUG END ========================');
+        
         setFavoriteCars(favoritesData);
         setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching cars:', err);
+      } catch (err) {
+        console.error('Error fetching favorite cars:', err);
         setLoading(false);
-      });
-  }, []);
-
-  const handleFavoriteToggle = (carId: string, isFavorite: boolean) => {
-    if (!isFavorite) {
-      // Supprimer de la liste si dé-favorisé
-      setFavoriteCars(prev => prev.filter(car => car.id !== carId));
-      setFavoriteIds(prev => prev.filter(id => id !== carId));
+      }
     }
-  };
+
+    loadFavoriteCars();
+  }, [favorites]);
 
   const clearAllFavorites = () => {
-    localStorage.setItem('favorites', '[]');
-    setFavoriteCars([]);
-    setFavoriteIds([]);
+    favorites.forEach(carId => {
+      removeFavorite(carId);
+    });
   };
 
   return (
@@ -92,9 +102,9 @@ export default function FavoritesPage() {
             </div>
           ) : favoriteCars.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {favoriteCars.map((car, idx) => (
-                <div key={car.id} style={{ animationDelay: `${idx * 0.1}s` }} className="animate-in-up">
-                  <CarCard car={car} onFavoriteToggle={handleFavoriteToggle} />
+              {favoriteCars.map((car) => (
+                <div key={car.id} className="animate-in-up">
+                  <CarCard car={car} />
                 </div>
               ))}
             </div>

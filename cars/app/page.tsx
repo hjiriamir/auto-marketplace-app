@@ -5,25 +5,36 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { SearchHero } from '@/components/search-hero';
 import { CarCard } from '@/components/car-card';
-import { Car } from '@/lib/db';
+import { Car } from '@/lib/db'; 
 import { ArrowRight, CheckCircle, DollarSign, Zap } from 'lucide-react';
 import Link from 'next/link';
+
+// 👉 Import du service API
+import carService from "@/services/carService";
 
 export default function Home() {
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/cars')
-      .then(res => res.json())
-      .then(data => {
-        setFeaturedCars(data.slice(0, 6));
+    async function loadCars() {
+      try {
+        const data = await carService.getCars();
+        // 🧹 Convertit _id → id si nécessaire
+        const cars = data.map((car: any) => ({
+          ...car,
+          id: car._id || car.id,
+        }));
+
+        setFeaturedCars(cars.slice(0, 6));
+      } catch (error) {
+        console.error("Erreur API getCars :", error);
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching cars:', err);
-        setLoading(false);
-      });
+      }
+    }
+
+    loadCars();
   }, []);
 
   return (
@@ -34,6 +45,7 @@ export default function Home() {
 
         <section id="featured" className="py-20 bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
             <div className="mb-16 animate-in-up">
               <span className="inline-block bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent text-sm font-bold uppercase tracking-wider mb-3">
                 Annonces en vedette
@@ -63,7 +75,10 @@ export default function Home() {
             )}
 
             <div className="mt-16 text-center animate-in-up" style={{ animationDelay: '0.6s' }}>
-              <Link href="/catalog" className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
+              <Link
+                href="/catalog"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-primary/30"
+              >
                 Voir tout le catalogue
                 <ArrowRight className="w-5 h-5" />
               </Link>

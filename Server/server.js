@@ -11,6 +11,7 @@ import userRoutes from "./Routes/userRoutes.js";
 import messageRoutes from "./Routes/contactMessageRoutes.js";
 import serviceRoutes from "./Routes/registrationRequestRoutes.js";
 import uploadRoutes from "./Routes/uploadRoutes.js";
+import uploadAdminRoutes from "./Routes/uploadAdminRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -20,7 +21,16 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// ✅ Correction CORS
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Routes API
 app.use("/api/cars", carRoutes);
@@ -28,11 +38,12 @@ app.use("/api/user", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/upload-admin", uploadAdminRoutes);
 
-// Servir le dossier uploads en statique pour les URL publiques
+// Static
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Vérification de la connexion
+// MongoDB connection check
 mongoose.connection.once("open", () => {
   console.log("MongoDB connecté :", mongoose.connection.host);
 });
