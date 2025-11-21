@@ -3,7 +3,8 @@ import {
   loginUser,
   forgotPassword,
   resetPassword,
-  updateProfile
+  updateProfile,
+  logoutUser
 } from "../Controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -11,6 +12,7 @@ const router = express.Router();
 
 // Login (obligatoire)
 router.post("/login", loginUser);
+router.get('/logout', logoutUser);
 
 // Reset password
 router.post("/forgot-password", forgotPassword);

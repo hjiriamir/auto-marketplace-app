@@ -7,26 +7,59 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { LogIn, AlertCircle } from 'lucide-react';
 
+interface LoginResponse {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  image: string;
+  token: string;
+}
+
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (login(username, password)) {
-      router.push('/admin');
-    } else {
-      setError('Identifiants invalides. Utilisez admin / password123');
+    try {
+      const response = await fetch('http://localhost:5000/api/user/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Identifiants invalides');
+      }
+
+      const data: LoginResponse = await response.json();
+      
+      // Utiliser la fonction login du contexte avec les données de l'API
+      if (login(data.email, data.token, data)) {
+        router.push('/admin');
+      } else {
+        setError('Échec de la connexion');
+      }
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -56,14 +89,15 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Nom d'utilisateur
+                  Email
                 </label>
                 <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="amirhjiri5@gmail.com"
                   className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
                 />
               </div>
 
@@ -77,6 +111,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
                 />
               </div>
 
@@ -92,8 +127,8 @@ export default function LoginPage() {
             <div className="mt-6 p-4 bg-background border border-border rounded-lg">
               <p className="text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground">Identifiants de test :</span><br />
-                Utilisateur: <code className="bg-muted px-2 py-1 rounded">admin</code><br />
-                Mot de passe: <code className="bg-muted px-2 py-1 rounded">password123</code>
+                Email: <code className="bg-muted px-2 py-1 rounded">amirhjiri5@gmail.com</code><br />
+                Mot de passe: <code className="bg-muted px-2 py-1 rounded">MotDePasseAdmin123!</code>
               </p>
             </div>
           </div>

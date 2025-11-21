@@ -2,50 +2,81 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+interface UserData {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  image: string;
+  token: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  username: string | null;
-  login: (username: string, password: string) => boolean;
+  user: UserData | null;
+  login: (email: string, token: string, userData: UserData) => boolean;
   logout: () => void;
+  isLoading: boolean; // Ajout crucial
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_ADMIN_USERNAME = 'admin';
-const DEFAULT_ADMIN_PASSWORD = 'password123';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // État de chargement
 
-  // Check if user is logged in on mount
+  // Vérifier si l'utilisateur est connecté au montage
   useEffect(() => {
-    const stored = localStorage.getItem('admin_auth');
-    if (stored) {
-      const { user } = JSON.parse(stored);
-      setUsername(user);
-      setIsAuthenticated(true);
-    }
+    const checkAuth = () => {
+      try {
+        const stored = localStorage.getItem('admin_auth');
+        if (stored) {
+          const authData = JSON.parse(stored);
+          if (authData.user && authData.token) {
+            setUser(authData.user);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'authentification:', error);
+        localStorage.removeItem('admin_auth');
+      } finally {
+        setIsLoading(false); // Important : indiquer que le chargement est terminé
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const login = (inputUsername: string, inputPassword: string): boolean => {
-    if (inputUsername === DEFAULT_ADMIN_USERNAME && inputPassword === DEFAULT_ADMIN_PASSWORD) {
-      setUsername(inputUsername);
+  const login = (email: string, token: string, userData: UserData): boolean => {
+    if (userData && userData.token) {
+      setUser(userData);
       setIsAuthenticated(true);
-      localStorage.setItem('admin_auth', JSON.stringify({ user: inputUsername }));
+      localStorage.setItem('admin_auth', JSON.stringify({ 
+        user: userData,
+        token: token 
+      }));
       return true;
     }
     return false;
   };
 
   const logout = () => {
-    setUsername(null);
+    setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('admin_auth');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, username, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      login, 
+      logout,
+      isLoading // N'oubliez pas d'exposer isLoading
+    }}>
       {children}
     </AuthContext.Provider>
   );

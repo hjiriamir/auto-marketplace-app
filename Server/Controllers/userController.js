@@ -35,6 +35,18 @@ export const loginUser = async (req, res) => {
   }
 };
 
+
+export const logoutUser = async (req, res) => {
+    try {
+      // Si tu utilises des cookies pour stocker le token
+      res.clearCookie("token", { httpOnly: true });
+      res.status(200).json({ message: "Déconnecté avec succès" });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la déconnexion", error });
+    }
+  };
+
+
 // --------------------------
 // Demande de réinitialisation du mot de passe
 // --------------------------
