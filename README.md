@@ -51,10 +51,3 @@ Elle offre une interface moderne avec gestion d’annonces, filtrage avancé, ta
 - Vercel pour le déploiement du frontend
 
 ---
-
-## 🚀 Installation & Lancement local
-
-1. **Cloner le repo**
-```bash
-git clone https://github.com/hjiriamir/auto-marketplace-app.git
-cd auto-marketplace-app
