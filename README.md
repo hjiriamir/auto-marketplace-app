@@ -54,17 +54,20 @@ Elle propose une interface utilisateur conviviale, un filtrage avancé des annon
 ## 📸 Captures d’écran (en développement)
 
 ### 🏠 Page d'accueil
-<img width="1344" height="717" alt="Page d'accueil" src="https://via.placeholder.com/1344x717.png?text=Page+d%27accueil+Auto-Marketplace" />
+<img width="1345" height="592" alt="image" src="https://github.com/user-attachments/assets/3f306989-1ab3-47c3-b590-ffe1fb1f461f" />
+
 
 ---
 
 ### 📊 Tableau de bord utilisateur
-<img width="1319" height="659" alt="Dashboard utilisateur" src="https://via.placeholder.com/1319x659.png?text=Dashboard+Utilisateur" />
+<img width="1271" height="650" alt="image" src="https://github.com/user-attachments/assets/a092a141-c20c-4b14-ba17-b07f98555843" />
+
 
 ---
 
 ### 📝 Création d'annonce
-<img width="1237" height="645" alt="Création d'annonce" src="https://via.placeholder.com/1237x645.png?text=Création+d%27annonce" />
+<img width="1126" height="982" alt="image (29)" src="https://github.com/user-attachments/assets/70d6f8d8-e1db-4c0e-8bce-b78399e5a0b8" />
+
 
 ---
 
