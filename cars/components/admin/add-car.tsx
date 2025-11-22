@@ -2,12 +2,14 @@
 
 import { useState, useRef } from 'react';
 import { X, Upload, Plus, Trash2 } from 'lucide-react';
+import carService from '@/services/carService';
 
 interface AddCarProps {
   onSuccess: () => void;
+  onCancel?: () => void;
 }
 
-export function AdminAddCar({ onSuccess }: AddCarProps) {
+export function AdminAddCar({ onSuccess, onCancel }: AddCarProps) {
   const [formData, setFormData] = useState({
     brand: '',
     model: '',
@@ -18,12 +20,8 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
     transmission: 'Manuelle',
     condition: 'Bon',
     description: '',
-    seller: {
-      name: '',
-      phone: '',
-      email: '',
-    },
   });
+
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,20 +31,12 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name.startsWith('seller.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        seller: { ...prev.seller, [field]: value }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: name === 'year' || name === 'price' || name === 'mileage' 
-          ? parseInt(value) 
-          : value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'year' || name === 'price' || name === 'mileage' 
+        ? parseInt(value) 
+        : value
+    }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +46,6 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
     const newImages: File[] = [];
     const newPreviews: string[] = [];
 
-    // Limiter à 10 images maximum
     const remainingSlots = 10 - images.length;
     const filesToAdd = Array.from(files).slice(0, remainingSlots);
 
@@ -71,7 +60,6 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
     setImages(prev => [...prev, ...newImages]);
     setImagePreviews(prev => [...prev, ...newPreviews]);
 
-    // Reset le input file
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -80,35 +68,9 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index]); // Libérer la mémoire
+      URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
-  };
-
-  const uploadImagesToServer = async (files: File[]): Promise<string[]> => {
-    const uploadedUrls: string[] = [];
-
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'car_uploads'); // Remplacez par votre upload preset Cloudinary
-
-      try {
-        const response = await fetch('https://api.cloudinary.com/v1_1/your-cloud-name/image/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          uploadedUrls.push(data.secure_url);
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-      }
-    }
-
-    return uploadedUrls;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,75 +78,126 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
     setLoading(true);
     setError('');
 
-    // Validation de base
+    // Validation
     if (images.length === 0) {
       setError('Veuillez ajouter au moins une image');
       setLoading(false);
       return;
     }
 
-    try {
-      let imageUrls: string[] = [];
+    if (!formData.brand || !formData.model) {
+      setError('Veuillez remplir tous les champs obligatoires');
+      setLoading(false);
+      return;
+    }
 
-      // Option 1: Upload vers Cloudinary (recommandé)
-      if (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) {
-        imageUrls = await uploadImagesToServer(images);
-      } else {
-        // Option 2: Simulation d'upload (pour le développement)
-        // En production, vous devriez utiliser un service comme Cloudinary, AWS S3, etc.
-        imageUrls = imagePreviews; // Utilise les previews comme URLs temporaires
-        console.warn('Using image previews as URLs. In production, implement proper image upload.');
+    try {
+      // Récupérer l'ID de l'admin connecté
+      const adminAuth = localStorage.getItem('admin_auth');
+      if (!adminAuth) {
+        throw new Error('Utilisateur non connecté');
       }
 
-      const response = await fetch('/api/cars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          images: imageUrls,
-          status: 'active',
-        }),
+      const authData = JSON.parse(adminAuth);
+      const sellerId = authData.user._id;
+
+      console.log('🚗 Début création voiture avec FormData');
+
+      // Créer FormData
+      const formDataToSend = new FormData();
+
+      // Ajouter les champs texte
+      Object.keys(formData).forEach(key => {
+        formDataToSend.append(key, formData[key].toString());
       });
 
-      if (response.ok) {
-        // Nettoyer les URLs temporaires
-        imagePreviews.forEach(url => URL.revokeObjectURL(url));
-        setImages([]);
-        setImagePreviews([]);
-        setFormData({
-          brand: '',
-          model: '',
-          year: new Date().getFullYear(),
-          price: 0,
-          mileage: 0,
-          fuelType: 'Essence',
-          transmission: 'Manuelle',
-          condition: 'Bon',
-          description: '',
-          seller: {
-            name: '',
-            phone: '',
-            email: '',
-          },
-        });
-        onSuccess();
-      } else {
-        setError('Erreur lors de l\'ajout de l\'annonce');
-      }
-    } catch (err) {
-      setError('Erreur lors de l\'ajout de l\'annonce');
+      // Ajouter le seller
+      formDataToSend.append('seller', JSON.stringify({
+        _id: sellerId,
+        name: authData.user.name,
+        phone: authData.user.phone,
+        email: authData.user.email
+      }));
+
+      // Ajouter le statut
+      formDataToSend.append('status', 'active');
+
+      // Ajouter les images
+      images.forEach((image, index) => {
+        formDataToSend.append('images', image);
+      });
+
+      // Debug: afficher le contenu de FormData
+      console.log('📤 FormData créé avec:', {
+        seller: sellerId,
+        imagesCount: images.length,
+        formData: Object.fromEntries(formDataToSend.entries())
+      });
+
+      // Appel au service modifié pour FormData
+      const newCar = await carService.createCarWithImages(formDataToSend);
+      console.log('✅ Voiture créée avec succès:', newCar);
+
+      // Nettoyer
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+      setImages([]);
+      setImagePreviews([]);
+      resetForm();
+      
+      onSuccess();
+
+    } catch (err: any) {
+      console.error('❌ Erreur création:', err);
+      
+      const errorMessage = err.response?.data?.message 
+        || err.message 
+        || 'Erreur lors de la création de l\'annonce';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      brand: '',
+      model: '',
+      year: new Date().getFullYear(),
+      price: 0,
+      mileage: 0,
+      fuelType: 'Essence',
+      transmission: 'Manuelle',
+      condition: 'Bon',
+      description: '',
+    });
+  };
+
+  const handleCancel = () => {
+    imagePreviews.forEach(url => URL.revokeObjectURL(url));
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6 shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Nouvelle annonce</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Nouvelle annonce</h2>
+        {onCancel && (
+          <button
+            onClick={handleCancel}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+            type="button"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        )}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-          {error}
+          <strong>Erreur:</strong> {error}
         </div>
       )}
 
@@ -193,7 +206,6 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
           <h3 className="text-lg font-semibold mb-4 text-gray-900">Images du véhicule</h3>
           
-          {/* Zone de drop et upload */}
           <div 
             className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors duration-300 cursor-pointer mb-4"
             onClick={() => fileInputRef.current?.click()}
@@ -215,7 +227,6 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
             />
           </div>
 
-          {/* Prévisualisation des images */}
           {imagePreviews.length > 0 && (
             <div className="mt-6">
               <h4 className="text-sm font-medium text-gray-700 mb-3">
@@ -242,7 +253,6 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
                   </div>
                 ))}
                 
-                {/* Bouton pour ajouter plus d'images */}
                 {imagePreviews.length < 10 && (
                   <div 
                     className="border-2 border-dashed border-gray-300 rounded-lg h-24 flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors duration-300"
@@ -382,50 +392,17 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
           />
         </div>
 
-        {/* Informations du vendeur */}
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900">Informations du vendeur</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
-              <input
-                type="text"
-                name="seller.name"
-                placeholder="Nom complet"
-                value={formData.seller.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone *</label>
-              <input
-                type="tel"
-                name="seller.phone"
-                placeholder="Numéro de téléphone"
-                value={formData.seller.phone}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-              <input
-                type="email"
-                name="seller.email"
-                placeholder="Adresse email"
-                value={formData.seller.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="flex gap-4 pt-4">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={loading}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              Annuler
+            </button>
+          )}
           <button
             type="submit"
             disabled={loading || images.length === 0}
@@ -434,12 +411,12 @@ export function AdminAddCar({ onSuccess }: AddCarProps) {
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Ajout en cours...
+                Création en cours...
               </>
             ) : (
               <>
                 <Plus className="w-5 h-5" />
-                Ajouter l'annonce
+                Créer l'annonce
               </>
             )}
           </button>

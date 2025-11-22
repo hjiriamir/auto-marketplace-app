@@ -2,7 +2,6 @@
 import axios from "axios";
 import { GLOBALS } from "../config.js";
 
-// Créer une instance Axios
 const api = axios.create({
   baseURL: GLOBALS.BASE_URL,
   headers: {
@@ -10,14 +9,52 @@ const api = axios.create({
   },
 });
 
-// Intercepteur pour ajouter le token automatiquement
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(GLOBALS.TOKEN_KEY);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== "undefined") {
+    console.log('🔍 DÉBUT INTERCEPTEUR - Recherche du token');
+    
+    let token = null;
+    
+    // Chercher dans admin_auth
+    try {
+      const adminAuth = localStorage.getItem('admin_auth');
+      console.log('📦 Données admin_auth brutes:', adminAuth);
+      
+      if (adminAuth) {
+        const authData = JSON.parse(adminAuth);
+        console.log('👤 Objet admin_auth parsé:', authData);
+        
+        // Essayer d'abord le token racine
+        token = authData.token;
+        console.log('🔐 Token racine dans admin_auth:', token);
+        
+        // Sinon chercher dans user.token
+        if (!token && authData.user) {
+          token = authData.user.token;
+          console.log('🔐 Token dans user object:', token);
+        }
+      }
+    } catch (error) {
+      console.log('❌ Erreur parsing admin_auth:', error);
+    }
+    
+    console.log('🗂️ Clés disponibles:', Object.keys(localStorage));
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Token ajouté aux headers');
+    } else {
+      console.log('❌ Aucun token trouvé');
+    }
+    
+    console.log('🔚 FIN INTERCEPTEUR');
   }
+  
   return config;
 });
+
+
+
 
 // Intercepteur pour gérer les erreurs globales
 api.interceptors.response.use(

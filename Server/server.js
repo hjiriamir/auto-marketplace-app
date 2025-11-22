@@ -13,6 +13,8 @@ import serviceRoutes from "./Routes/registrationRequestRoutes.js";
 import uploadRoutes from "./Routes/uploadRoutes.js";
 import uploadAdminRoutes from "./Routes/uploadAdminRoutes.js";
 
+import carRoute from "./Routes/cars.js";
+
 dotenv.config();
 connectDB();
 
@@ -39,6 +41,9 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/upload-admin", uploadAdminRoutes);
+
+
+app.use("/api/carse", carRoute);
 
 // Static
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
