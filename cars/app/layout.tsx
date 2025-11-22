@@ -13,7 +13,9 @@ export const metadata: Metadata = {
   description: 'Plateforme moderne pour l\'achat et la vente de voitures d\'occasion en Tunisie. Annonces fiables, prix transparents, procédures immatriculées.',
   
   icons: {
+    
     icon: [
+      '/favicon.ico',
       {
         url: '/icon-light-32x32.png',
         media: '(prefers-color-scheme: light)',
